@@ -4,7 +4,10 @@ import { snapshotToData } from './helpers';
 import useListReducer from './helpers/useListReducer';
 import { LoadingHook, useIsEqualRef } from '../util';
 
-export type ListHook = LoadingHook<firebase.database.DataSnapshot[], firebase.FirebaseError>;
+export type ListHook = LoadingHook<
+  firebase.database.DataSnapshot[],
+  firebase.FirebaseError
+>;
 export type ListKeysHook = LoadingHook<string[], firebase.FirebaseError>;
 export type ListValsHook<T> = LoadingHook<T[], firebase.FirebaseError>;
 
@@ -64,16 +67,24 @@ export const useList = (query?: firebase.database.Query | null): ListHook => {
     };
   }, [ref.current]);
 
-  return [state.value.values, state.loading, state.error];
+  const resArray: ListHook = [state.value.values, state.loading, state.error];
+  return useMemo(() => resArray, resArray);
 };
 
-export const useListKeys = (query?: firebase.database.Query | null): ListKeysHook => {
-  const [value, loading, error] = useList(query);
-  return [
-    value ? value.map(snapshot => snapshot.key as string) : undefined,
-    loading,
-    error,
-  ];
+export const useListKeys = (
+  query?: firebase.database.Query | null
+): ListKeysHook => {
+  const [snapshots, loading, error] = useList(query);
+  const values = useMemo(
+    () =>
+      snapshots
+        ? snapshots.map((snapshot) => snapshot.key as string)
+        : undefined,
+    [snapshots]
+  );
+  const resArray: ListKeysHook = [values, loading, error];
+
+  return useMemo(() => resArray, resArray);
 };
 
 export const useListVals = <T>(
@@ -86,11 +97,13 @@ export const useListVals = <T>(
   const values = useMemo(
     () =>
       snapshots
-        ? snapshots.map(snapshot =>
+        ? snapshots.map((snapshot) =>
             snapshotToData(snapshot, options ? options.keyField : undefined)
           )
         : undefined,
     [snapshots, options && options.keyField]
   );
-  return [values, loading, error];
+
+  const resArray: ListValsHook<T> = [values, loading, error];
+  return useMemo(() => resArray, resArray);
 };
